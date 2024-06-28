@@ -8,12 +8,14 @@ else()
 	add_compile_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
+add_subdirectory(vendor/cJSON)
+
 file(GLOB_RECURSE CVFS_SOURCES CONFIGURE_DEPENDS "src/*.c")
 
 add_library(CVFS ${CVFS_SOURCES}) 
-target_include_directories(CVFS PUBLIC include src)
+target_include_directories(CVFS PUBLIC include src vendor/cJSON)
 
 if(true)
 add_executable(test test/main.c ${CVFS_SOURCES})
-target_include_directories(test PUBLIC include src test)
+target_include_directories(test PUBLIC include src test vendor/cJSON)
 endif()
