@@ -1,4 +1,7 @@
 #include <CVFS.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <cJSON.h>
 
 struct _VFS {

@@ -1,17 +1,10 @@
 #ifndef __CVFS_H__
 #define __CVFS_H__
 
-#define VFS_VERSION "0.0.1"
-
-// TODO: Get rid of this
+// TODO: Maybe Get rid of this
 //!
 #include <stdbool.h>
 #include <stdint.h>
-#include <stddef.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <string.h>
 //!
 
 typedef struct _VFS VFS;
