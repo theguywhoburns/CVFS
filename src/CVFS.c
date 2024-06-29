@@ -30,10 +30,9 @@ VFS* CreateVFS(const char* path) {
 		return NULL;
 	}
 	char* data = (char*)cJSON_Print(root);
-	char* data_size = malloc(10);
-	data_size = _itoa(strlen(data), data, 10);
+	char data_size[11];
+	snprintf(data_size, 11, "%zu", strlen(data));
 	fwrite(data_size, strlen(data_size), 1, handle);
-	free(data_size);
 	fwrite(data, strlen(data), 1, handle);
 	free(data);
 	fflush(handle);

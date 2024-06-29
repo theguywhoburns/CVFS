@@ -8,15 +8,21 @@ else()
 	add_compile_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_DEBUG_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
 add_subdirectory(vendor/cJSON)
 
 file(GLOB_RECURSE CVFS_SOURCES CONFIGURE_DEPENDS "src/*.c")
+
+
 
 add_library(CVFS ${CVFS_SOURCES}) 
 target_include_directories(CVFS PUBLIC include src vendor/cJSON)
 target_link_libraries(CVFS PUBLIC cjson)
 if(true)
-add_executable(test test/main.c ${CVFS_SOURCES})
+add_executable(test test/main.c test/console.c ${CVFS_SOURCES})
 target_include_directories(test PUBLIC include src test vendor/cJSON)
 target_link_libraries(test PUBLIC cjson)
+
 endif()
