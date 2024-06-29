@@ -14,8 +14,9 @@ file(GLOB_RECURSE CVFS_SOURCES CONFIGURE_DEPENDS "src/*.c")
 
 add_library(CVFS ${CVFS_SOURCES}) 
 target_include_directories(CVFS PUBLIC include src vendor/cJSON)
-
+target_link_libraries(CVFS PUBLIC cjson)
 if(true)
 add_executable(test test/main.c ${CVFS_SOURCES})
 target_include_directories(test PUBLIC include src test vendor/cJSON)
+target_link_libraries(test PUBLIC cjson)
 endif()
