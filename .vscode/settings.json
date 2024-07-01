@@ -3,6 +3,7 @@
 		"*.embeddedhtml": "html",
 		"*.wglsl": "wgsl",
 		"cvfs.h": "c",
-		"cjson.h": "c"
+		"cjson.h": "c",
+		"cstring": "c"
 	}
 }

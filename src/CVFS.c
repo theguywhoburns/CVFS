@@ -4,6 +4,20 @@
 #include <stdio.h>
 #include <cJSON.h>
 
+/*
+The File's formate
++---------------------------------+
+| Metadata (FAT, Inodes, etc.)    |
++---------------------------------+
+|                                 |
+| File Data                       | 
+| ...                             |
+| ...                             |
+| ...              		          |
+| ...                             |
++---------------------------------+
+*/
+
 struct _VFS {
 	cJSON* table;
 	size_t size;
@@ -16,31 +30,40 @@ struct _VFS_FILE_HANDLE {
 
 
 VFS* CreateVFS(const char* path) {
-	FILE* handle = fopen(path, "wb");
-	if (handle == NULL) {
-		return NULL;
-	}
-	cJSON* root = cJSON_CreateObject();
-	if (root == NULL) {
-		fclose(handle);
-		return NULL;
-	}
-	cJSON* version = cJSON_AddStringToObject(root, "version", VFS_VERSION);
-	cJSON* FAT = cJSON_AddArrayToObject(root, "FAT");
-	if (version == NULL || FAT == NULL) {
-		cJSON_Delete(root);
-		fclose(handle);
-		return NULL;
-	}
-	char* data = (char*)cJSON_Print(root);
-	char data_size[11];
-	snprintf(data_size, 11, "%zu", strlen(data));
-	fwrite(data_size, strlen(data_size), 1, handle);
-	fwrite(data, strlen(data), 1, handle);
-	free(data);
-	fflush(handle);
-	cJSON_Delete(root);
-	fclose(handle);
+ FILE* handle = fopen(path, "wb");
+    if (handle == NULL) {
+        return NULL;
+    }
+    cJSON* root = cJSON_CreateObject();
+    if (root == NULL) {
+        fclose(handle);
+        return NULL;
+    }
+    cJSON* version = cJSON_AddStringToObject(root, "version", VFS_VERSION);
+    cJSON* FAT = cJSON_AddArrayToObject(root, "FAT");
+    if (version == NULL || FAT == NULL) {
+        cJSON_Delete(root);
+        fclose(handle);
+        return NULL;
+    }
+    char* data = cJSON_Print(root);
+    char data_size[11];
+    snprintf(data_size, 11, "%zu", strlen(data));
+    fwrite(data_size, strlen(data_size), 1, handle);
+    fwrite(data, strlen(data), 1, handle);
+    free(data);
+    fflush(handle);
+    cJSON_Delete(root);
+    fclose(handle);
+
+    VFS* vfs = (VFS*)malloc(sizeof(VFS));
+    if (vfs == NULL) {
+        return NULL;
+    }
+    vfs->table = cJSON_Parse(data);
+    vfs->size = 0;
+    vfs->data = NULL;
+    return vfs;
 }
 
 // Will load the table and return the offset to read from at the end
