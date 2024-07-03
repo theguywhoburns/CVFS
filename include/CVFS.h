@@ -1,17 +1,45 @@
-#ifndef __CVFS_H__
-#define __CVFS_H__
+#ifndef CVFS_H
+#define CVFS_H
 
-// TODO: Maybe Get rid of this
-//!
 #include <stdbool.h>
 #include <stdint.h>
-//!
 
+
+/*
+The File's format
++---------------------------------+
+| Metadata (FAT, Inodes, etc.)    |
++---------------------------------+
+|                                 |
+| File Data                       | 
+| ...                             |
+| ...                             |
+| ...                                |
+| ...                             |
++---------------------------------+
+*/
+
+
+//Handle to Virtual file system
 typedef struct _VFS VFS;
+//Handle to a file in the Virtual file system
 typedef struct _VFS_FILE_HANDLE VFS_FILE_HANDLE;
 
+
+/*
+Creates a Virtual file system
+\n
+---Example file
+{
+    "version":    "0.0.1",
+    "vfs-size":    53,
+    "FAT":    []
+}
+*/
 VFS* CreateVFS(const char* path);
+//loads an existing Virtual file system file
 VFS* LoadVFS(const char* path);
+//Free the memory of a Virtual file system
 void DestroyVFS(VFS* vfs);
 
 bool FileExists(VFS* vfs, const char* path);

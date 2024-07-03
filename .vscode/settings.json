@@ -4,6 +4,7 @@
 		"*.wglsl": "wgsl",
 		"cvfs.h": "c",
 		"cjson.h": "c",
-		"cstring": "c"
+		"cstring": "c",
+		"stddef.h": "c"
 	}
 }
