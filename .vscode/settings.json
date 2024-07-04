@@ -5,6 +5,9 @@
 		"cvfs.h": "c",
 		"cjson.h": "c",
 		"cstring": "c",
-		"stddef.h": "c"
+		"stddef.h": "c",
+		"limits.h": "c",
+		"stdio.h": "c",
+		"string.h": "c"
 	}
 }

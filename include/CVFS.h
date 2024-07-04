@@ -4,7 +4,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-
 /*
 The File's format
 +---------------------------------+
@@ -50,7 +49,10 @@ typedef enum _VFS_FILE_MODE {
 	VFS_FILE_MODE_APPEND = 2,
 	VFS_FILE_MODE_CREATE = 4
 } VFS_FILE_MODE;
-
+//Opens a file save it's meta data in the VFS file
+//@ path -> file location
+// mode -> open mode (check _VFS_FILE_MODE enum for more details)
+//@ returns Handle to file : VFS_FILE_HANDLE *
 VFS_FILE_HANDLE* OpenFile(VFS* vfs, const char* path, VFS_FILE_MODE mode);
 bool ExtractFile(VFS* vfs, const char* src, const char* dst);
 void DeleteFile(VFS* vfs, const char* path);

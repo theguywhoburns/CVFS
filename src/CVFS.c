@@ -1,9 +1,12 @@
 #include <CVFS.h>
+#include <string.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <limits.h>
 #include <cJSON.h>
-
+#define CVFS_MAX_PATH 260
+#define TEMP_VFS_SIZE 0x0 
 /*
 The File's format
 +---------------------------------+
@@ -21,10 +24,11 @@ The File's format
 struct _VFS 
 {
 	cJSON* table;
+	const char * json_file;
 };
 
 struct _VFS_FILE_HANDLE {
-	void* temp;
+	cJSON* metaData;
 };
 
 VFS* CreateVFS(const char* path) 
@@ -52,8 +56,10 @@ VFS* CreateVFS(const char* path)
 	cJSON* version = cJSON_AddStringToObject(root, "version", VFS_VERSION);
 
 	// Add a vfs-size number to represent the size of the vfs JSON file
-	#define TEMP_VFS_SIZE 0x0 
 	cJSON* vfs_size = cJSON_AddNumberToObject(root, "vfs-size", TEMP_VFS_SIZE);
+
+	// Add a FAT-count number to represent the count 
+	cJSON* fatCountItem = cJSON_AddNumberToObject(root, "FAT-count", 0);
 
 	// Add an empty array to the JSON object for the FAT (File Allocation Table)
 	cJSON* FAT = cJSON_AddArrayToObject(root, "FAT");
@@ -101,7 +107,7 @@ VFS* CreateVFS(const char* path)
 
 	// Parse the JSON data back into a cJSON object and assign it to the VFS structure
 	vfs->table = root;
-
+	vfs->json_file = path;
 	// Return the pointer to the new VFS structure
 	return vfs;
 }
@@ -165,7 +171,6 @@ void DestroyVFS(VFS* vfs) {
 }
 
 bool FileExists(VFS* vfs, const char* path) {
-	//will find this out later
 
 	// // bro, Check for NULL pointers
     // if (vfs == NULL || path == NULL) {
@@ -186,16 +191,158 @@ bool FileExists(VFS* vfs, const char* path) {
     //         }
     //     }
     // }
-	// // ret false if no macth
-    // return false;
+	// //ret false if no macth
+    return false;
 }
 
 VFS_FILE_HANDLE* OpenFile(VFS* vfs, const char* path, VFS_FILE_MODE mode) {
+    // Check for NULL pointers
+    if (vfs == NULL || path == NULL) {
+        return NULL;
+    }
 
+    cJSON* root = vfs->table;
+    FILE* file = NULL;
+
+    // Translate enum file modes
+    switch (mode) {
+        case VFS_FILE_MODE_READ:
+            file = fopen(path, "r");
+            break;
+        case VFS_FILE_MODE_WRITE:
+            file = fopen(path, "r+");
+            break;
+        case VFS_FILE_MODE_APPEND:
+            file = fopen(path, "a+");
+            break;
+        case VFS_FILE_MODE_CREATE:
+            file = fopen(path, "w");
+            break;
+        default:
+            return NULL;
+    }
+
+    if (file == NULL) {
+        return NULL;
+    }
+
+    // Get the array called 'FAT'
+    cJSON* FAT = cJSON_GetObjectItem(root, "FAT");
+    if (FAT == NULL) {
+        fclose(file);
+        return NULL;
+    }
+
+    // Create an object to hold the metadata
+    cJSON* metaData = cJSON_CreateObject();
+    if (metaData == NULL) {
+        fclose(file);
+        return NULL;
+    }
+
+    // Add the file path to the object
+    char absolute_path[CVFS_MAX_PATH];
+    #if defined(CVFS_WINDOWS)
+        if (_fullpath(absolute_path, path, CVFS_MAX_PATH) == NULL) {
+            fclose(file);
+            return NULL;
+        }
+    #else // Linux and Apple
+        if (realpath(path, absolute_path) == NULL) {
+            fclose(file);
+            return NULL;
+        }
+    #endif
+    if (!cJSON_AddStringToObject(metaData, "file-path", absolute_path)) {
+        cJSON_Delete(metaData);
+        fclose(file);
+        return NULL;
+    }
+
+    // Add the file size to the object
+    fseek(file, 0, SEEK_END);
+    long size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    if (!cJSON_AddNumberToObject(metaData, "file-size", size)) {
+        cJSON_Delete(metaData);
+        fclose(file);
+        return NULL;
+    }
+
+    // Add the metadata to the array called 'FAT'
+    if (!cJSON_AddItemToArray(FAT, metaData)) {
+        cJSON_Delete(metaData);
+        fclose(file);
+        return NULL;
+    }
+
+    // Print the JSON data onto a string buffer
+    char* jsonData = cJSON_Print(root);
+    if (jsonData == NULL) {
+        fclose(file);
+        return NULL;
+    }
+
+    // Get the length of the string
+    size_t jsonData_size = strlen(jsonData);
+
+    // Update the 'vfs-size' with the actual JSON size
+    cJSON* vfs_size = cJSON_GetObjectItem(root, "vfs-size");
+    if (!vfs_size) {
+        fclose(file);
+        free(jsonData);
+        return NULL;
+    }
+    cJSON_SetNumberValue(vfs_size, jsonData_size);
+	cJSON* fatCountItem = cJSON_GetObjectItem(root, "FAT-count");
+	// Update the 'FAT-count' variable
+ 	if (fatCountItem == NULL) {
+		fclose(file);
+        free(jsonData);
+        return NULL;
+    }
+	int fatCountValue = fatCountItem->valueint;	
+	fatCountValue++;
+	cJSON_SetNumberValue(fatCountItem, fatCountValue);	
+
+    // Print the JSON data again after updating the size
+    char* updatedJsonData = cJSON_Print(root);
+    if (updatedJsonData == NULL) {
+        fclose(file);
+        free(jsonData);
+        return NULL;
+    }
+
+    // Get the updated JSON size
+    jsonData_size = strlen(updatedJsonData);
+
+    // Write the actual JSON data to the VFS file
+    FILE* vfs_file = fopen(vfs->json_file, "r+");
+    if (vfs_file == NULL) {
+        fclose(file);
+        free(jsonData);
+        free(updatedJsonData);
+        return NULL;
+    }
+    fwrite(updatedJsonData, jsonData_size, 1, vfs_file);
+
+    // Free resources
+    //fclose(file); -> use CloseFile to close the file
+    fclose(vfs_file);
+    free(jsonData);
+    free(updatedJsonData);
+
+    VFS_FILE_HANDLE* handle = (VFS_FILE_HANDLE*)malloc(sizeof(VFS_FILE_HANDLE));
+    if (handle == NULL) {
+        return NULL;
+    }
+    handle->metaData = metaData;
+    return handle;
 }
 
-bool ExtractFile(VFS* vfs, const char* src, const char* dst) {
 
+bool ExtractFile(VFS* vfs, const char* src, const char* dst) {
+return 0;
 }
 
 void DeleteFile(VFS* vfs, const char* path) {
@@ -203,28 +350,40 @@ void DeleteFile(VFS* vfs, const char* path) {
 }
 
 int CloseFile(VFS_FILE_HANDLE* handle) {
-
+	//Check if the pointer is null
+	if(handle == NULL){
+		return -1;
+	}
+	//get the file-path variable, which happens to be in index zero
+	cJSON* index0 = cJSON_GetObjectItem(handle->metaData, "file-path");
+	//reinterpret the data as a string
+	const char * file_path = cJSON_GetStringValue(index0);
+	if(!file_path){
+		return -1;
+	}
+	//using the string close the file
+	return fclose(file_path);
 }
 
 size_t ReadFile(VFS_FILE_HANDLE* handle, void* buffer, size_t size) {
-
+return 0;
 }
 
 size_t WriteFile(VFS_FILE_HANDLE* handle, const void* buffer, size_t size) {
-
+return 0;
 }
 
 
 size_t GetFileSize(VFS_FILE_HANDLE* handle) {
-
+return 0;
 }
 
 size_t GetFileName(VFS_FILE_HANDLE* handle, char* buffer, size_t size) {
-
+return 0;
 }
 
 bool   SetFileName(VFS_FILE_HANDLE* handle, const char* name) {
-
+	return 0;
 }
 
 #if _DEBUG
