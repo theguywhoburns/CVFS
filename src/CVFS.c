@@ -5,6 +5,22 @@
 #include <stdio.h>
 #include <limits.h>
 #include <cJSON.h>
+#include "ht.h"
+
+typedef const char* allocated_ccp;
+
+#define duplicate_ccp(retname, src) allocated_ccp retname = strdup(src);
+
+void allocated_ccp_ht_dtor(allocated_ccp key) {
+	free(key);
+}
+
+bool allocated_ccp_ht_equals(allocated_ccp key1, allocated_ccp key2) {
+	return strcmp(key1, key2) == 0;	
+}
+
+__define_ht_main(allocated_ccp, allocated_ccp);
+
 #define CVFS_MAX_PATH 260
 #define TEMP_VFS_SIZE 0x0 
 /*
@@ -23,8 +39,9 @@ The File's format
 
 struct _VFS 
 {
+	// The table is here temporary, it will be re-constructed into a recursive hash table for increased perfomance
 	cJSON* table;
-	const char * json_file;
+	FILE* main_vfs_file;
 };
 
 struct _VFS_FILE_HANDLE {
@@ -35,81 +52,18 @@ VFS* CreateVFS(const char* path)
 {
 	// Open file in binary write mode
 	FILE* handle = fopen(path, "wb");
-
 	// Check if the file was successfully opened
-	if (handle == NULL) {
-    	// If not, return NULL to indicate error
-    	return NULL;
+	if (handle == NULL || path == NULL) {
+    // If not, return NULL to indicate error
+    return NULL;
 	}
 
-	// Create a new JSON object
-	cJSON* root = cJSON_CreateObject();
-
-	// Check if the JSON object was successfully created
-	if (root == NULL) {
-    	// If not, close the file and return NULL
-    	fclose(handle);
-    	return NULL;
-	}
-
-	char buf[256];
-	snprintf(buf, sizeof(buf), "%d.%d.%d%s", VFS_VERSION_MAJOR, VFS_VERSION_MINOR, VFS_VERSION_PATCH, VFS_VERSION_ADDITIONAL);
-	// Add a version string to the JSON object
-	cJSON* version = cJSON_AddStringToObject(root, "version", buf);
-
-	// Add a vfs-size number to represent the size of the vfs JSON file
-	cJSON* vfs_size = cJSON_AddNumberToObject(root, "vfs-size", TEMP_VFS_SIZE);
-
-	// Add a FAT-count number to represent the count 
-	cJSON* fatCountItem = cJSON_AddNumberToObject(root, "FAT-count", 0);
-
-	// Add an empty array to the JSON object for the FAT (File Allocation Table)
-	cJSON* FAT = cJSON_AddArrayToObject(root, "FAT");
-
-	// Check if the JSON properties were successfully added
-	if (version == NULL || vfs_size == NULL || FAT == NULL) {
-    	// If not, delete the JSON object, close the file, and return NULL
-    	cJSON_Delete(root);
-    	fclose(handle);
-    	return NULL;
-	}
-
-	// Print the JSON object to a string
-	char* jsonData = cJSON_Print(root);
-
-	// Create a buffer to store the size of the JSON data as a string
-	char jsonData_size_str[sizeof(int) * 8];
-	// Convert the int to a string
-	snprintf(jsonData_size_str, sizeof(int) * 8, "%zu", strlen(jsonData));
-
-	// change the "vfs-size" variable to the size of the json file
-	cJSON_SetNumberValue(vfs_size, strlen(jsonData) + strlen(jsonData_size_str));
-
-	//formate the jsonData on to a string
-	jsonData = cJSON_Print(root);
-	// Write the actual JSON data to the vfs file
-	fwrite(jsonData, strlen(jsonData), 1, handle);
-
-	// Free the memory allocated for the JSON string
-	free(jsonData);
-
-	// Flush the file buffer to ensure all data is written
-	fflush(handle);
-
-	// Close the file
-	fclose(handle);
-
-	// Allocate memory for a new VFS structure
 	VFS* vfs = (VFS*)malloc(sizeof(VFS));
-
-	// Check if the memory allocation was successful
 	if (vfs == NULL) {
-    	return NULL;
-	}
 
-	// Parse the JSON data back into a cJSON object and assign it to the VFS structure
-	vfs->table = root;
-	vfs->json_file = path;
+    return NULL;
+	}
+	vfs->main_vfs_file = path;
 	// Return the pointer to the new VFS structure
 	return vfs;
 }
@@ -190,7 +144,9 @@ bool FileExists(VFS* vfs, const char* path) {
 }
 
 VFS_FILE_HANDLE* OpenFile(VFS* vfs, const char* path, VFS_FILE_MODE mode) {
-    // Check for NULL pointers
+    //! NOTICE: THE WHOLE FUNCTION HAS TO BE REWRITTEN DUE TO THE NEW STRUCTURE OF THE VFS
+		//! HOW THIS WILL WORK: THE STR WILL BE SEARCHED IN THE HASH TABLE USING allocated_ccp_ht_exists(key <- this one doesn't have to be allocated)
+		// Check for NULL pointers
     if (vfs == NULL || path == NULL) {
         return NULL;
     }
@@ -310,20 +266,24 @@ VFS_FILE_HANDLE* OpenFile(VFS* vfs, const char* path, VFS_FILE_MODE mode) {
     // Get the updated JSON size
     jsonData_size = strlen(updatedJsonData);
 
+		
     // Write the actual JSON data to the VFS file
-    FILE* vfs_file = fopen(vfs->json_file, "r+");
+    /*
+		FILE* vfs_file = fopen(vfs->json_file, "r+");
     if (vfs_file == NULL) {
         fclose(file);
         free(jsonData);
         free(updatedJsonData);
         return NULL;
     }
+
     fwrite(updatedJsonData, jsonData_size, 1, vfs_file);
 
     // Free resources
     //fclose(file); -> use CloseFile to close the file
     fclose(vfs_file);
-    free(jsonData);
+    */
+		free(jsonData);
     free(updatedJsonData);
 
     VFS_FILE_HANDLE* handle = (VFS_FILE_HANDLE*)malloc(sizeof(VFS_FILE_HANDLE));
@@ -344,6 +304,7 @@ void DeleteFile(VFS* vfs, const char* path) {
 }
 
 int CloseFile(VFS_FILE_HANDLE* handle) {
+	//! NOTICE: SAME HERE
 	//Check if the pointer is null
 	if(handle == NULL){
 		return -1;
@@ -356,7 +317,8 @@ int CloseFile(VFS_FILE_HANDLE* handle) {
 		return -1;
 	}
 	//using the string close the file
-	return fclose(file_path);
+	//return fclose(file_path);
+	return 0;
 }
 
 size_t ReadFile(VFS_FILE_HANDLE* handle, void* buffer, size_t size) {
@@ -397,3 +359,5 @@ void PrintVFSTable(VFS* vfs)
 }
 
 #endif
+
+__define_ht_main_impl(allocated_ccp, allocated_ccp);
