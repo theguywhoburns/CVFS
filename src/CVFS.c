@@ -53,7 +53,7 @@ VFS* CreateVFS(const char* path)
 	}
 
 	char buf[256];
-	snprintf(buf, sizeof(buf), "%s", VFS_VERSION);
+	snprintf(buf, sizeof(buf), "%d.%d.%d%s", VFS_VERSION_MAJOR, VFS_VERSION_MINOR, VFS_VERSION_PATCH, VFS_VERSION_ADDITIONAL);
 	// Add a version string to the JSON object
 	cJSON* version = cJSON_AddStringToObject(root, "version", buf);
 

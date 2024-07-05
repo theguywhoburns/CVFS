@@ -26,12 +26,17 @@ endif()
 
 if(MSVC)
 	add_compile_options(/D_CRT_SECURE_NO_WARNINGS)
-    #define VFS_VERSION "0.0.1"
-add_definitions(/DVFS_VERSION="0.0.1")
+add_definitions(/DVFS_VERSION_MAJOR=0)
+add_definitions(/DVFS_VERSION_MINOR=0)
+add_definitions(/DVFS_VERSION_PATCH=1)
+add_definitions(/DVFS_VERSION_ADDITIONAL="")
 else()
 	add_compile_definitions(-D_CRT_SECURE_NO_WARNINGS)
     #define VFS_VERSION "0.0.1"
-add_definitions(-DVFS_VERSION="0.0.1")
+    add_definitions(-DVFS_VERSION_MAJOR=0)
+    add_definitions(-DVFS_VERSION_MINOR=0)
+    add_definitions(-DVFS_VERSION_PATCH=1)
+    add_definitions(-DVFS_VERSION_ADDITIONAL="")
 endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
