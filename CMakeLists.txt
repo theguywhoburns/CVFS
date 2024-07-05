@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-#define VFS_VERSION "0.0.1"
-add_definitions(-DVFS_VERSION="0.0.1")
+
 
 project(CVFS VERSION 0.1.0 LANGUAGES C CXX)
 
@@ -27,8 +26,12 @@ endif()
 
 if(MSVC)
 	add_compile_options(/D_CRT_SECURE_NO_WARNINGS)
+    #define VFS_VERSION "0.0.1"
+add_definitions(/DVFS_VERSION="0.0.1")
 else()
 	add_compile_definitions(-D_CRT_SECURE_NO_WARNINGS)
+    #define VFS_VERSION "0.0.1"
+add_definitions(-DVFS_VERSION="0.0.1")
 endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)

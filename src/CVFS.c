@@ -52,8 +52,10 @@ VFS* CreateVFS(const char* path)
     	return NULL;
 	}
 
+	char buf[256];
+	snprintf(buf, sizeof(buf), "%s", VFS_VERSION);
 	// Add a version string to the JSON object
-	cJSON* version = cJSON_AddStringToObject(root, "version", VFS_VERSION);
+	cJSON* version = cJSON_AddStringToObject(root, "version", buf);
 
 	// Add a vfs-size number to represent the size of the vfs JSON file
 	cJSON* vfs_size = cJSON_AddNumberToObject(root, "vfs-size", TEMP_VFS_SIZE);
@@ -157,17 +159,9 @@ VFS* LoadVFS(const char* path)
 }
 
 void DestroyVFS(VFS* vfs) {
-	if(vfs)
-	{
-		if(vfs->table)
-		{
-			//delete the root
-			cJSON_Delete(vfs->table);
-		}
-		//free the memory vfs prt is point to
-		free(vfs);
-	}
-
+	if(!vfs) return;
+	if(vfs->table) cJSON_Delete(vfs->table);
+	free(vfs);
 }
 
 bool FileExists(VFS* vfs, const char* path) {
