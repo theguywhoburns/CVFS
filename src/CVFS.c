@@ -23,11 +23,25 @@ The File's format
 +---------------------------------+
 */
 
+typedef char* cp;
+#define cp_ht_dtor(cp) free(cp)
+#define cp_ht_equal(cp1, cp2) strcmp(cp1, cp2) == 0
+cp cp_copy(const char* cp) { char* ret = malloc(strlen(cp) + 1); while (cp) {*ret++ = *cp++;} return ret; }
+size_t cp_ht_hash(const char* cp) { 
+   size_t ret = 0;
+   const size_t len = strlen(cp);
+   __HASHFUNC_FNV1A(ret, cp, len);
+   return ret;  
+}
+
+define_ht_all(cp, cp);
+define_ht_all_impl(cp, cp);
+
 struct _VFS 
 {
 	// The table is here temporary, it will be re-constructed into a hash table for increased perfomance
 	cJSON* table;
-	allocated_ccp_allocated_ccp_ht *FAT;
+	cp_cp_ht_t *FAT;
 	FILE* main_vfs_file;
 };
 
