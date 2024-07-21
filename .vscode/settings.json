@@ -3,6 +3,17 @@
 		"*.embeddedhtml": "html",
 		"*.wglsl": "wgsl",
 		"stdint.h": "c",
+<<<<<<< HEAD
 		"console.h": "c"
+=======
+		"type_traits": "cpp",
+		"xtr1common": "cpp",
+		"xutility": "cpp",
+		"stdint-gcc.h": "c",
+		"ht.h": "c",
+		"stddef.h": "c",
+		"stdio.h": "c",
+		"string.h": "c"
+>>>>>>> e1570ed522f7ac4a70cd57a3116b3804e773cf97
 	}
 }

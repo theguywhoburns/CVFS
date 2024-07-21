@@ -3,43 +3,29 @@
 #include <string.h>
 
 typedef const char* ccp;
-__define_ht_main(ccp, int);
 
-size_t ccp_ht_hash(const char* key) {
+
+#define ccp_ht_dtor(x) free(x)
+#define int_ht_dtor(x) (unsigned int)x
+
+size_t ccp_ht_hash(ccp key) {
 	size_t ret = 0;
-	const size_t _keysize = strlen(key);
-	__HASHFUNC_FNV1A(ret, key, _keysize);
+	const int len = strlen(key);
+	__HASHFUNC_FNV1A(ret, key, len);
 	return ret;
 }
 
-void int_ht_dtor(int key) {
-	//DO NOTHING
-}
+#define ccp_copy(x) strdup(x)
+#define int_copy(x) x
 
-void ccp_ht_dtor(ccp key) {
-	//DO NOTHING
-}
+#define ccp_ht_equal(x, y) strcmp(x, y)
 
-bool ccp_ht_equal(const char* key1, const char* key2) {
-	return strcmp(key1, key2) == 0;
-}
+define_ht_all(ccp, int);
+define_ht_all_impl(ccp, int);
 
-void ccp_int_ht_dump(ccp_int_ht* ht) {
-	for (int i = 0; i < ht->size; i++) {
-		___ht_entry_ccp_int *cur = ht->entries[i];
-		if(cur != NULL) printf("\n[%d]: ", i);
-		while (cur != NULL) {
-			printf("%s:%d;", cur->key, cur->val);
-			cur = cur->next;
-		}
-	}
-}
-
-__define_ht_main_impl(ccp, int);
 
 int main(int argc, char **argv) {
-	ccp_int_ht* ht = ccp_int_ht_init();
-
+	ccp_int_ht_t ht = ccp_int_ht_create();
 	/*
 	[163]: waldo:fred;
 	[644]: plugh:xyzzy;
@@ -52,18 +38,27 @@ int main(int argc, char **argv) {
 	[9551]: grault:garply;
 	[9986]: xyzzy:thud;
 	*/
-	ccp_int_ht_set(ht, "Zero", 0);
-	ccp_int_ht_set(ht, "One", 1);
-	ccp_int_ht_set(ht, "Two", 2);
-	ccp_int_ht_set(ht, "Three", 3);
-	ccp_int_ht_set(ht, "Four", 4);
-	ccp_int_ht_set(ht, "Five", 5);
-	ccp_int_ht_set(ht, "Six", 6);
-	ccp_int_ht_set(ht, "Seven", 7);
-	ccp_int_ht_set(ht, "Eight", 8);
-	ccp_int_ht_set(ht, "Nine", 9);	
+	ccp_int_ht_set(&ht, "Zero", 0);
+	ccp_int_ht_set(&ht, "One", 1);
+	ccp_int_ht_set(&ht, "Two", 2);
+	ccp_int_ht_set(&ht, "Three", 3);
+	ccp_int_ht_set(&ht, "Four", 4);
+	ccp_int_ht_set(&ht, "Five", 5);
+	ccp_int_ht_set(&ht, "Six", 6);
+	ccp_int_ht_set(&ht, "Seven", 7);
+	ccp_int_ht_set(&ht, "Eight", 8);
+	ccp_int_ht_set(&ht, "Nine", 9);
 
-	ccp_int_ht_dump(ht);
-	ccp_int_ht_destroy(ht);
+	int d = ccp_int_ht_get(&ht, "Nine");
+	ccp_int_ht_remove(&ht, "One");
+	bool e = ccp_int_ht_exists(&ht, "One"); 
+	ccp_int_ht_set(&ht, "One", 1);
+	e = ccp_int_ht_exists(&ht, "One"); 
+
+	ccp_int_ht_dump(&ht);
+	e = ccp_int_ht_exists(&ht, "One"); 
+	ccp_int_ht_removeAll(&ht);
+	
+	ccp_int_ht_destroy(&ht);
 	return 0;
 }

@@ -5,21 +5,7 @@
 #include <stdio.h>
 #include <limits.h>
 #include <cJSON.h>
-#include "ht.h"
-
-typedef const char* allocated_ccp;
-
-#define duplicate_ccp(retname, src) allocated_ccp retname = strdup(src);
-
-void allocated_ccp_ht_dtor(allocated_ccp key) {
-	free(key);
-}
-
-bool allocated_ccp_ht_equals(allocated_ccp key1, allocated_ccp key2) {
-	return strcmp(key1, key2) == 0;	
-}
-
-__define_ht_main(allocated_ccp, allocated_ccp);
+#include <ht.h>
 
 #define CVFS_MAX_PATH 260
 #define TEMP_VFS_SIZE 0x0 
@@ -361,4 +347,4 @@ void PrintVFSTable(VFS* vfs)
 
 #endif
 
-__define_ht_main_impl(allocated_ccp, allocated_ccp);
+//__define_ht_main_impl(allocated_ccp, allocated_ccp);
