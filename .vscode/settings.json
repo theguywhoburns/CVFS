@@ -2,6 +2,7 @@
 	"files.associations": {
 		"*.embeddedhtml": "html",
 		"*.wglsl": "wgsl",
-		"stdint.h": "c"
+		"stdint.h": "c",
+		"console.h": "c"
 	}
 }

@@ -32,15 +32,16 @@ The File's format
 | File Data                       | 
 | ...                             |
 | ...                             |
-| ...              		          |
+| ...              		            |
 | ...                             |
 +---------------------------------+
 */
 
 struct _VFS 
 {
-	// The table is here temporary, it will be re-constructed into a recursive hash table for increased perfomance
+	// The table is here temporary, it will be re-constructed into a hash table for increased perfomance
 	cJSON* table;
+	allocated_ccp_allocated_ccp_ht *FAT;
 	FILE* main_vfs_file;
 };
 

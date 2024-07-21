@@ -3,7 +3,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-void SetConsoleColor(enum ConsoleColor bg_color, enum ConsoleColor fg_color, enum ConsoleAttribute attribute) {
+void SetConsoleColor(enum ConsoleColor bg_color, enum ConsoleColor fg_color, enum AsciiAttribute attribute) {
   WORD attributes = 0;
 
   switch (attribute) {
