@@ -2,6 +2,14 @@
 	"files.associations": {
 		"*.embeddedhtml": "html",
 		"*.wglsl": "wgsl",
-		"stdint.h": "c"
+		"stdint.h": "c",
+		"type_traits": "cpp",
+		"xtr1common": "cpp",
+		"xutility": "cpp",
+		"stdint-gcc.h": "c",
+		"ht.h": "c",
+		"stddef.h": "c",
+		"stdio.h": "c",
+		"string.h": "c"
 	}
 }
