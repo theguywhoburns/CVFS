@@ -25,6 +25,7 @@ The File's format
 
 typedef char* cp;
 #define cp_ht_dtor(cp) free(cp)
+#define cp_ht_value(v) (&v)
 #define cp_ht_equal(cp1, cp2) strcmp(cp1, cp2) == 0
 cp cp_copy(char* cp) { char* ret = malloc(strlen(cp) + 1); while (cp) {*ret++ = *cp++;} return ret; }
 size_t cp_ht_hash(char* cp) { 
@@ -64,7 +65,7 @@ VFS* CreateVFS(const char* path)
 
     return NULL;
 	}
-	vfs->main_vfs_file = path;
+	//vfs->main_vfs_file = path;
 	// Return the pointer to the new VFS structure
 	return vfs;
 }

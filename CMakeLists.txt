@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.5)
 
 project(CVFS VERSION 0.1.0 LANGUAGES C CXX)
 
@@ -46,12 +46,12 @@ add_subdirectory(vendor/cJSON)
 file(GLOB_RECURSE CVFS_SOURCES CONFIGURE_DEPENDS "src/*.c")
 
 add_library(CVFS ${CVFS_SOURCES}) 
-target_include_directories(CVFS PUBLIC include src vendor/cJSON vendor/Demiyanit_ht)
+target_include_directories(CVFS PUBLIC include src vendor/cJSON)
 target_link_libraries(CVFS PUBLIC cjson)
 
 if(true)
 add_executable(test test/main.c test/console.c ${CVFS_SOURCES})
-target_include_directories(test PUBLIC include src test vendor/cJSON vendor/Demiyanit_ht)
+target_include_directories(test PUBLIC include src test vendor/cJSON)
 target_link_libraries(test PUBLIC cjson)
 
 endif()
