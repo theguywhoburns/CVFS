@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.5)
 project(CVFS VERSION 0.1.0 LANGUAGES C CXX)
 
 #check Platform
-if(WIN32 OR _WIN32 OR WIN64 OR _WIN64)
+if(WIN32 OR _WIN32 OR WIN64 OR _WIN64 OR __MINGW32__ OR __MINGW64__)
     # Windows-specific setup
     message(STATUS "Configuring for Windows")
     add_definitions(-DCVFS_WINDOWS)
