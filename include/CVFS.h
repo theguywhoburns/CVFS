@@ -35,7 +35,7 @@ Creates a Virtual file system
     "FAT":    []
 }
 */
-VFS* VFS_Create(const char* path);
+VFS* VFS_Create(char* const path);
 //loads an existing Virtual file system file
 VFS* LoadVFS(const char* path);
 //Free the memory of a Virtual file system

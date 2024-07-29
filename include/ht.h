@@ -95,7 +95,7 @@
 			ht->length++;	\
 			current_entry->is_set = true;	\
 			current_entry->key = key_t##_copy(key);	\
-			current_entry->val = val;	\
+			current_entry->val = val_t##_copy(val);	\
 		} \
 		if ((double)ht->length / ht->size > ht->max_load_factor) { key_t##_##val_t##_ht_resize(ht); }	\
 	}

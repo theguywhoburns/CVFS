@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifdef CVFS_WINDOWS
+#if defined (CVFS_WINDOWS)
 #include <Windows.h>
 
 // Gets the absolute file path
@@ -36,7 +36,8 @@ int is_folder(const char *path) {
 
 // bruh why unix. I FUCKING LOVE WINDOWS NOW
 
-#else // Apple or Unix
+ // Apple or Unix
+#elif defined(U_APPLE) || defined(U_UNIX) || defined(__MINGW32__) || defined(__MINGW64__)
 #include <limits.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -54,14 +55,14 @@ char* abs_path(const char *rel) {
     }
 
     #if defined(__MINGW32__) || defined(__MINGW64__)
-    // GetFullPathName for MinGW
+    // Use GetFullPathName for MinGW
     if (GetFullPathName(rel, PATH_MAX, absolute_path, NULL) == 0) {
         perror("abs_path->GetFullPathName");
         free(absolute_path);
         return NULL;
     }
     #else
-    // realpath for Unix-like systems
+    // Use realpath for Unix-like systems
     if (realpath(rel, absolute_path) == NULL) {
         perror("abs_path->realpath");
         free(absolute_path);
@@ -82,5 +83,8 @@ int is_folder(const char *path) {
     }
     return S_ISDIR(path_stat.st_mode);
 }
+
+#else
+#error "None found for you compiler"
 #endif
 

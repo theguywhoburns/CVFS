@@ -1,4 +1,7 @@
 #include "defines.h"
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+#define VERSION TOSTRING(VFS_VERSION_MAJOR) "." TOSTRING(VFS_VERSION_MINOR) "." TOSTRING(VFS_VERSION_PATCH)
 #include <CVFS.h>
 #include <string.h>
 #include <stddef.h>
@@ -10,9 +13,9 @@
 
 
 /*
-The File's format
+A Normal File's format
 +---------------------------------+
-| Metadata (FAT, Inodes, etc.)    |
+| Metadata (FAT, Inodes, etc.)    | -> meta data to track
 +---------------------------------+
 |                                 |
 | File Data                       | 
@@ -27,9 +30,9 @@ The File's format
 
 typedef VFS_FILE* VFS_FILE_ref;
 
-typedef const char* FILE_NAME;
+typedef char* FILE_NAME;
 
-#define FILE_NAME_ht_dtor(FILE_NAME) free(FILE_NAME)
+#define FILE_NAME_ht_dtor(fn) free(fn)
 
 #define VFS_FILE_ref_ht_dtor(VFS_FILE_ref) free(VFS_FILE_ref)
 
@@ -39,20 +42,14 @@ typedef const char* FILE_NAME;
 
 #define FILE_NAME_ht_equal(cp1, cp2) strcmp(cp1, cp2) == 0
 
-FILE_NAME FILE_NAME_copy(FILE_NAME cp) { char* ret = malloc(strlen(cp) + 1); while (cp) {*ret++ = *cp++;} return ret; }
-
-VFS_FILE_ref VFS_FILE_ref_copy(VFS_FILE_ref cp) 
+FILE_NAME FILE_NAME_copy(FILE_NAME cp) 
 {
-	return  cp;
+	size_t len = strlen(cp) + 1;
+	char* ret = malloc(len); 
+	ret[len - 1] = '\0';
+	strncpy(ret, cp, len - 1);
+	return ret; 
 }
-//Might change this up a bit
-size_t FILE_NAME_ht_hash(char* cp) {
-   size_t ret = 0;
-   const size_t len = strlen(cp);
-   __HASHFUNC_FNV1A(ret, cp, len);
-   return ret;  
-}
-
 
 struct VFS_FILE {
 	//slow access meta-data
@@ -63,6 +60,19 @@ struct VFS_FILE {
 	bool is_dir;
 };
 
+VFS_FILE_ref VFS_FILE_ref_copy(VFS_FILE_ref origin) 
+{
+	VFS_FILE_ref cpy = malloc(sizeof(VFS_FILE));
+	memcpy(cpy, origin, sizeof(VFS_FILE));
+	return cpy;
+}
+//Might change this up a bit
+size_t FILE_NAME_ht_hash(FILE_NAME cp) {
+   size_t ret = 0;
+   const size_t len = strlen(cp);
+   __HASHFUNC_FNV1A(ret, cp, len);
+   return ret;  
+}
 
 define_ht_all(FILE_NAME, VFS_FILE_ref);
 define_ht_all_impl(FILE_NAME, VFS_FILE_ref);
@@ -76,8 +86,9 @@ struct VFS
 };
 
 
-VFS* VFS_Create(const char* vfs_file_path) 
+VFS* VFS_Create(char* const vfs_file_path) 
 {
+	'!'
 	if (vfs_file_path == NULL) return NULL;
 	// Open file in binary write mode
 	FILE* vfs_file = fopen(vfs_file_path, "wb");
@@ -97,9 +108,7 @@ VFS* VFS_Create(const char* vfs_file_path)
 	vfs->table = cJSON_CreateObject();
 	if (vfs->table == NULL) return NULL;
 
-	#define STRINGIFY(x) #x
-	#define TOSTRING(x) STRINGIFY(x)
-	cJSON* version = cJSON_AddStringToObject(vfs->table, "version", TOSTRING(VFS_VERSION_MAJOR) "." TOSTRING(VFS_VERSION_MINOR) "." TOSTRING(VFS_VERSION_PATCH));
+	cJSON* version = cJSON_AddStringToObject(vfs->table, "version", VERSION);
 	cJSON* fat_count = cJSON_AddNumberToObject(vfs->table, "fat-count", TEMP_VFS_SIZE);
 	cJSON* fat = cJSON_AddArrayToObject(vfs->table, "fat");
 
@@ -179,31 +188,48 @@ VFS* VFS_Create(const char* vfs_file_path)
 //	free(vfs);
 //}
 //
-//bool FileExists(VFS* vfs, const char* path) {
-//
-//	// // bro, Check for NULL pointers
-//    // if (vfs == NULL || path == NULL) {
-//    //     return false;
-//    // }
-//	// cJSON* FAT = cJSON_GetObjectItem(vfs->table, "FAT");
-//	// if (FAT == NULL) {
-//    //     return false;
-//    // }
-//    // cJSON* fileEntry;
-// 	// cJSON_ArrayForEach(fileEntry, FAT) {
-//    //     // Get the "path" field of the current file entry
-//    //     cJSON* filePath = cJSON_GetObjectItem(fileEntry, "path");
-//    //     if (filePath != NULL && cJSON_IsString(filePath)) {
-//    //         // Compare the current file's path with the given path
-//    //         if (strcmp(filePath->valuestring, path) == 0) {
-//    //             return true; // File exists
-//    //         }
-//    //     }
-//    // }
-//	// //ret false if no macth
-//    return false;
-//}
-//
+bool FileExists(VFS* vfs, const char* path) {
+	// Check for NULL pointers
+   if (vfs == NULL || path == NULL) {
+       return false;
+   }
+	cJSON* FAT = cJSON_GetObjectItem(vfs->table, "FAT");
+	if (FAT == NULL) {
+       return false;
+   }
+    cJSON* fileEntry;
+    cJSON_ArrayForEach(fileEntry, FAT) {
+       // Get the "path" field of the current file entry
+       cJSON* filePath = cJSON_GetObjectItem(fileEntry, "file-path");
+       if (filePath != NULL && cJSON_IsString(filePath)) {
+           // Compare the current file's path with the given path
+           if (strcmp(filePath->valuestring, path) == 0) {
+               return true; // File exists
+           }
+       }
+   }
+	//ret false if no macth
+   return false;
+}
+
+
+void cjson_to_ht_entrey(FILE_NAME_VFS_FILE_ref_ht_t this, cJSON * metadata)
+{
+
+	cJSON * abs_path = cJSON_GetObjectItem(metadata, "abs-path");
+	cJSON * file_size = cJSON_GetObjectItem(metadata, "file-size");
+	cJSON * is_dir = cJSON_GetObjectItem(metadata, "is-dir");
+	cJSON_bool dir = cJSON_IsTrue(is_dir);
+	VFS_FILE file = {
+		.file_name = cJSON_GetStringValue(abs_path),
+		.file_size = cJSON_GetNumberValue(file_size),
+		.is_dir = dir,
+		.json_metaData = metadata
+	};
+	FILE_NAME_VFS_FILE_ref_ht_set(&this, cJSON_GetStringValue(abs_path), &file);
+
+}
+
 VFS_FILE* VFS_OpenFile(VFS* vfs, const char* file_path, VFS_FILE_MODE mode) {
    //! NOTICE: THE WHOLE FUNCTION HAS TO BE REWRITTEN DUE TO THE NEW STRUCTURE OF THE VFS
 		//! HOW THIS WILL WORK: THE STR WILL BE SEARCHED IN THE HASH TABLE USING allocated_ccp_ht_exists(key <- this one doesn't have to be allocated)
@@ -234,7 +260,7 @@ VFS_FILE* VFS_OpenFile(VFS* vfs, const char* file_path, VFS_FILE_MODE mode) {
 
    if(!file ) return NULL;
 
-   // Get the array called 'FAT'
+   // Get the array called 'fat'
    cJSON* fat = cJSON_GetObjectItem(root, "fat");
    if (fat == NULL) {
        fclose(file);
@@ -320,6 +346,9 @@ VFS_FILE* VFS_OpenFile(VFS* vfs, const char* file_path, VFS_FILE_MODE mode) {
 	   fclose(file);
        return NULL;
   	}
+	
+	// Add the cJSON data as an object to the ht
+	cjson_to_ht_entrey(vfs->FAT, metaData);
 
 	// OPEN Vfs json file
 	FILE* vfs_file = fopen(vfs->vfs_file_path, "wb");
