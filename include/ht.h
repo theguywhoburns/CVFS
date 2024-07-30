@@ -94,8 +94,8 @@
 		if (!current_entry->is_set) {	\
 			ht->length++;	\
 			current_entry->is_set = true;	\
-			current_entry->key = key_t##_copy(key);	\
-			current_entry->val = val_t##_copy(val);	\
+			current_entry->key = key_t##_ht_copy(key);	\
+			current_entry->val = val_t##_ht_copy(val);	\
 		} \
 		if ((double)ht->length / ht->size > ht->max_load_factor) { key_t##_##val_t##_ht_resize(ht); }	\
 	}
@@ -112,7 +112,7 @@
 		while (current_entry->is_set) {	\
 			int comparison = key_t##_ht_equal(current_entry->key, key);	\
 			if (comparison == 0) {	\
-				return val_t##_copy(current_entry->val);	\
+				return val_t##_ht_copy(current_entry->val);	\
 			} else {	\
 				if (power_of_two == 33) {	power_of_two = 0; } \
 				index = (index + powers_of_2[power_of_two++]) % ht->size; \

@@ -1,7 +1,7 @@
 #include "defines.h"
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
-#define VERSION TOSTRING(VFS_VERSION_MAJOR) "." TOSTRING(VFS_VERSION_MINOR) "." TOSTRING(VFS_VERSION_PATCH)
+#define VFS_VERSION_STR TOSTRING(VFS_VERSION_MAJOR) "." TOSTRING(VFS_VERSION_MINOR) "." TOSTRING(VFS_VERSION_PATCH)
 #include <CVFS.h>
 #include <string.h>
 #include <stddef.h>
@@ -28,22 +28,17 @@ A Normal File's format
 
 #define TEMP_VFS_SIZE 0x0 
 
-typedef VFS_FILE* VFS_FILE_ref;
+typedef VFS_FILE* VFSFPTR;
 
 typedef char* FILE_NAME;
-
 #define FILE_NAME_ht_dtor(fn) free(fn)
-
-#define VFS_FILE_ref_ht_dtor(VFS_FILE_ref) free(VFS_FILE_ref)
-
 #define FILE_NAME_ht_value(v) (&v)
-
-#define VFS_FILE_ref_ht_value(VFS_FILE_ref) (&VFS_FILE_ref)
-
 #define FILE_NAME_ht_equal(cp1, cp2) strcmp(cp1, cp2) == 0
+#define VFSFPTR_ht_dtor(VFSFPTR) free(VFSFPTR)
+#define VFSFPTR_ht_value(VFSFPTR) (&VFSFPTR)
 
-FILE_NAME FILE_NAME_copy(FILE_NAME cp) 
-{
+
+FILE_NAME FILE_NAME_ht_copy(FILE_NAME cp)  {
 	size_t len = strlen(cp) + 1;
 	char* ret = malloc(len); 
 	ret[len - 1] = '\0';
@@ -60,12 +55,12 @@ struct VFS_FILE {
 	bool is_dir;
 };
 
-VFS_FILE_ref VFS_FILE_ref_copy(VFS_FILE_ref origin) 
-{
-	VFS_FILE_ref cpy = malloc(sizeof(VFS_FILE));
+VFSFPTR VFSFPTR_ht_copy(VFSFPTR origin)  {
+	VFSFPTR cpy = malloc(sizeof(VFS_FILE));
 	memcpy(cpy, origin, sizeof(VFS_FILE));
 	return cpy;
 }
+
 //Might change this up a bit
 size_t FILE_NAME_ht_hash(FILE_NAME cp) {
    size_t ret = 0;
@@ -74,21 +69,24 @@ size_t FILE_NAME_ht_hash(FILE_NAME cp) {
    return ret;  
 }
 
-define_ht_all(FILE_NAME, VFS_FILE_ref);
-define_ht_all_impl(FILE_NAME, VFS_FILE_ref);
+define_ht_all(FILE_NAME, VFSFPTR);
+define_ht_all_impl(FILE_NAME, VFSFPTR);
 
-struct VFS 
-{
+typedef struct FILE_METADATA {
+	size_t offset;   // offset to locate the file in the vfs
+};
+
+struct VFS  {
 	// The table is here temporary, it will be re-constructed into a hash table for increased perfomance
 	cJSON* table;
-	FILE_NAME_VFS_FILE_ref_ht_t FAT;
+	FILE_NAME_VFSFPTR_ht_t FAT;
 	FILE_NAME vfs_file_path;
 };
 
 
 VFS* VFS_Create(char* const vfs_file_path) 
 {
-	'!'
+
 	if (vfs_file_path == NULL) return NULL;
 	// Open file in binary write mode
 	FILE* vfs_file = fopen(vfs_file_path, "wb");
@@ -103,12 +101,12 @@ VFS* VFS_Create(char* const vfs_file_path)
 	VFS * vfs = calloc(1, sizeof(VFS));
 
 	if (!vfs) return NULL;
-	vfs->FAT = FILE_NAME_VFS_FILE_ref_ht_create();
+	vfs->FAT = FILE_NAME_VFSFPTR_ht_create();
 
 	vfs->table = cJSON_CreateObject();
 	if (vfs->table == NULL) return NULL;
 
-	cJSON* version = cJSON_AddStringToObject(vfs->table, "version", VERSION);
+	cJSON* version = cJSON_AddStringToObject(vfs->table, "version", VFS_VERSION_STR);
 	cJSON* fat_count = cJSON_AddNumberToObject(vfs->table, "fat-count", TEMP_VFS_SIZE);
 	cJSON* fat = cJSON_AddArrayToObject(vfs->table, "fat");
 
@@ -213,7 +211,7 @@ bool FileExists(VFS* vfs, const char* path) {
 }
 
 
-void cjson_to_ht_entrey(FILE_NAME_VFS_FILE_ref_ht_t this, cJSON * metadata)
+void cjson_to_ht_entrey(FILE_NAME_VFSFPTR_ht_t this, cJSON * metadata)
 {
 
 	cJSON * abs_path = cJSON_GetObjectItem(metadata, "abs-path");
@@ -226,97 +224,94 @@ void cjson_to_ht_entrey(FILE_NAME_VFS_FILE_ref_ht_t this, cJSON * metadata)
 		.is_dir = dir,
 		.json_metaData = metadata
 	};
-	FILE_NAME_VFS_FILE_ref_ht_set(&this, cJSON_GetStringValue(abs_path), &file);
+	FILE_NAME_VFSFPTR_ht_set(&this, cJSON_GetStringValue(abs_path), &file);
 
 }
 
 VFS_FILE* VFS_OpenFile(VFS* vfs, const char* file_path, VFS_FILE_MODE mode) {
-   //! NOTICE: THE WHOLE FUNCTION HAS TO BE REWRITTEN DUE TO THE NEW STRUCTURE OF THE VFS
-		//! HOW THIS WILL WORK: THE STR WILL BE SEARCHED IN THE HASH TABLE USING allocated_ccp_ht_exists(key <- this one doesn't have to be allocated)
-		// Check for NULL pointers
-   if (vfs == NULL || vfs->table == NULL || file_path == NULL) {
-       return NULL;
-   }
-   cJSON* root = vfs->table;
-   FILE* file = NULL;
+    //! NOTICE: THE WHOLE FUNCTION HAS TO BE REWRITTEN DUE TO THE NEW STRUCTURE OF THE VFS
+    //! HOW THIS WILL WORK: THE STR WILL BE SEARCHED IN THE HASH TABLE USING allocated_ccp_ht_exists(key <- this one doesn't have to be allocated)
+	// Check for NULL pointers
+    if (vfs == NULL || vfs->table == NULL || file_path == NULL) {
+        return NULL;
+    }
+    cJSON* root = vfs->table;
+    FILE* file = NULL;
 	
-   // Translate enum file modes
-   switch (mode) {
-       case VFS_FILE_MODE_READ:
-           file = fopen(file_path, "r");
-           break;
-       case VFS_FILE_MODE_WRITE:
-           file = fopen(file_path, "r+");
-           break;
-       case VFS_FILE_MODE_APPEND:
-           file = fopen(file_path, "a+");
-           break;
-       case VFS_FILE_MODE_CREATE:
-           file = fopen(file_path, "w");
-           break;
-       default:
-           return NULL;
-   }
+    // Translate enum file modes
+    switch (mode) {
+    case VFS_FILE_MODE_READ:
+        file = fopen(file_path, "r");
+        break;
+    case VFS_FILE_MODE_WRITE:
+        file = fopen(file_path, "r+");
+        break;
+    case VFS_FILE_MODE_APPEND:
+        file = fopen(file_path, "a+");
+        break;
+    case VFS_FILE_MODE_CREATE:
+        file = fopen(file_path, "w");
+        break;
+    default:
+        return NULL;
+    }
+    if(!file ) return NULL;
 
-   if(!file ) return NULL;
-
-   // Get the array called 'fat'
-   cJSON* fat = cJSON_GetObjectItem(root, "fat");
-   if (fat == NULL) {
-       fclose(file);
-       return NULL;
-   }
-
-   // Create an object to hold the metadata
-   cJSON* metaData = cJSON_CreateObject();
-   if (metaData == NULL) {
-       fclose(file);
-       return NULL;
-   }
-
-   // Add the file path to the object
-   char* absolute_path = abs_path(file_path);
+    // Get the array called 'fat'
+    cJSON* fat = cJSON_GetObjectItem(root, "fat");
+    if (fat == NULL) {
+        fclose(file);
+        return NULL;
+    }
+    // Create an object to hold the metadata
+    cJSON* metaData = cJSON_CreateObject();
+    if (metaData == NULL) {
+        fclose(file);
+        return NULL;
+    }
+    // Add the file path to the object
+    char* absolute_path = abs_path(file_path);
 
 	//when absolute path is to long
 	if (!absolute_path) {	
-	   assert(!absolute_path);
-       return NULL;
-   }
+        assert(!absolute_path);
+        return NULL;
+    }
 
 	// Add the absolute file path to the object
-   if (!cJSON_AddStringToObject(metaData, "abs-path", absolute_path)) {
-	   free(absolute_path);
-       cJSON_Delete(metaData);
-       fclose(file);
-       return NULL;
-   }
+    if (!cJSON_AddStringToObject(metaData, "abs-path", absolute_path)) {
+	    free(absolute_path);
+        cJSON_Delete(metaData);
+        fclose(file);
+        return NULL;
+    }
 
 	// Add the is_dir to the object
-   cJSON_bool is_dir = is_folder(absolute_path);
-   if (!cJSON_AddBoolToObject(metaData, "is-dir", is_dir)) {
-		free(absolute_path);
-       cJSON_Delete(metaData);
-       fclose(file);
-       return NULL;
-   }
-   free(absolute_path);
+    cJSON_bool is_dir = is_folder(absolute_path);
+    if (!cJSON_AddBoolToObject(metaData, "is-dir", is_dir)) {
+	    free(absolute_path);
+        cJSON_Delete(metaData);
+        fclose(file);
+        return NULL;
+    }
+    free(absolute_path);
 
-   // Add the file size to the object
-   fseek(file, 0, SEEK_END);
-   long size = ftell(file);
-   fseek(file, 0, SEEK_SET);
-   if (!cJSON_AddNumberToObject(metaData, "file-size", size)) {
-       cJSON_Delete(metaData);
-       fclose(file);
-       return NULL;
-   }
+    // Add the file size to the object
+    fseek(file, 0, SEEK_END);
+    long size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    if (!cJSON_AddNumberToObject(metaData, "file-size", size)) {
+        cJSON_Delete(metaData);
+        fclose(file);
+        return NULL;
+    }
 
-   // Add the metadata to the array called 'fat'
-   if (!cJSON_AddItemToArray(fat, metaData)) {
-       cJSON_Delete(metaData);
-       fclose(file);
-       return NULL;
-   }
+    // Add the metadata to the array called 'fat'
+    if (!cJSON_AddItemToArray(fat, metaData)) {
+        cJSON_Delete(metaData);
+        fclose(file);
+        return NULL;
+    }
 
 	cJSON* fat_count = cJSON_GetObjectItem(root, "fat-count");
 	// Update the 'fat-count' variable
@@ -324,13 +319,13 @@ VFS_FILE* VFS_OpenFile(VFS* vfs, const char* file_path, VFS_FILE_MODE mode) {
 	   cJSON_Delete(metaData);
 	   fclose(file);
        return NULL;
-   }
+    }
 
-   // Increment fat-count
+    // Increment fat-count
 	cJSON_SetNumberValue(fat_count, fat_count->valueint + 1);	
 
 	// Will hold the file data
-   	VFS_FILE_ref handle = (VFS_FILE_ref)calloc(1, sizeof(VFS_FILE));
+   	VFSFPTR handle = (VFSFPTR)calloc(1, sizeof(VFS_FILE));
    	if (handle == NULL) {
 		cJSON_Delete(metaData);
 	    fclose(file);

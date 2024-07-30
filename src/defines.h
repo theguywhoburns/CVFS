@@ -1,8 +1,19 @@
+#pragma once
+#include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+
+#define TODO(message) assert(false && "TODO: " #message)
 
 #if defined (CVFS_WINDOWS)
 #include <Windows.h>
+
+
 
 // Gets the absolute file path
 char* abs_path(const char *rel) {

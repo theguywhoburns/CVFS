@@ -1,8 +1,15 @@
 #ifndef CVFS_H
 #define CVFS_H
 
-#include <stdbool.h>
-#include <stdint.h>
+#include <ht.h>
+#define VFS_PATH_MAX 128
+// 128 characters
+// first / is unnecessary but will still be counted to the path length
+// /helloworldthisisammaxpathfilesoillfillitupuntillitgetstothetiseof256characterssoicanfillitupwithjustAsiWantToSeeIfItWorksW.txt
+
+// we'll preallocate the first filesystem size to be 1 megabyte
+// if it becomes full it'll create other part of the filesystem and point to it
+// they will be merged into the first one if the user wants to 
 
 /*
 The File's format
@@ -24,17 +31,20 @@ typedef struct VFS VFS;
 //Handle to a file in the Virtual file system
 typedef struct VFS_FILE VFS_FILE;
 
+// HashTable typedefs
+typedef char*  vfs_cstring; // Full path to file
+typedef size_t vfs_size_t;  // offset to the file in the VFS, the size of the header is always the same so we don't need to store it in the HT
+define_ht_all(vfs_cstring, vfs_size_t); 
 
-/*
-Creates a Virtual file system
-\n
----Example file
-{
-    "version":    "0.0.1",
-    "vfs-size":    53,
-    "FAT":    []
-}
-*/
+/**
+ * Creates a Virtual file system
+ * ---Example file
+ *	{
+ * 		"version":    "0.0.1",
+ *		"vfs-size":    53,
+ *		"FAT":    []
+ *	}
+ */
 VFS* VFS_Create(char* const path);
 //loads an existing Virtual file system file
 VFS* LoadVFS(const char* path);
