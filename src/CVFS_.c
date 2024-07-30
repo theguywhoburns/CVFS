@@ -34,32 +34,6 @@ struct VFS {
 	vfs_cstring_vfs_size_t_ht_t table;
 };
 
-VFS* VFS_Create(char* const path) {
-	VFS* vfs = malloc(sizeof(VFS));
-	vfs->table = vfs_cstring_vfs_size_t_ht_create();
-	vfs->vfs_file_handle = fopen(path, "wb");
-	if (vfs->vfs_file_handle == NULL) {
-		vfs_cstring_vfs_size_t_ht_destroy(&vfs->table);
-		free(vfs);
-		return NULL;
-	}
-	cJSON* fat = cJSON_CreateObject();
-	cJSON_AddStringToObject(fat, "version", vfs_version);
-	cJSON_AddArrayToObject(fat, "fat");
-	char* fat_str = cJSON_Print(fat);
-	size_t fat_str_len = strlen(fat_str);
-	char fat_str_len_str[10] = {0};
-	for(int i = 9; i >= 0; i--) {
-		fat_str_len_str[i] = fat_str_len % 10 + '0';
-		fat_str_len /= 10;
-	}
-	fwrite(fat_str_len_str, 1, 10, vfs->vfs_file_handle);
-	fwrite(fat_str, 1, fat_str_len, vfs->vfs_file_handle);
-	cJSON_Delete(fat);
-	free(fat_str);
-	return vfs;
-}
-
 void construct_hashtable_for_vfs(VFS* vfs, cJSON* fat_arr) {
 	for(int i = 0; i < cJSON_GetArraySize(fat_arr); i++) {
 		cJSON* cur = cJSON_GetArrayItem(fat_arr, i);
@@ -73,6 +47,33 @@ void construct_hashtable_for_vfs(VFS* vfs, cJSON* fat_arr) {
 			assert(false && "Unknown type in fat array");
 		}
 	}
+}
+
+VFS* VFS_Create(char* const path) {
+	VFS* vfs = malloc(sizeof(VFS));
+	vfs->table = vfs_cstring_vfs_size_t_ht_create();
+	vfs->vfs_file_handle = fopen(path, "wb");
+	if (vfs->vfs_file_handle == NULL) {
+		vfs_cstring_vfs_size_t_ht_destroy(&vfs->table);
+		free(vfs);
+		return NULL;
+	}
+	cJSON* fat = cJSON_CreateObject();
+	cJSON_AddStringToObject(fat, "version", vfs_version);
+	cJSON *fat_arr = cJSON_AddArrayToObject(fat, "fat");
+	char* fat_str = cJSON_Print(fat);
+	size_t fat_str_len = strlen(fat_str);
+	char fat_str_len_str[10] = {0};
+	for(int i = 9; i >= 0; i--) {
+		fat_str_len_str[i] = fat_str_len % 10 + '0';
+		fat_str_len /= 10;
+	}
+	fwrite(fat_str_len_str, 1, 10, vfs->vfs_file_handle);
+	fwrite(fat_str, 1, fat_str_len, vfs->vfs_file_handle);
+	construct_hashtable_for_vfs(vfs, fat_arr);
+	free(fat_str);
+	cJSON_Delete(fat);
+	return vfs;
 }
 
 VFS* LoadVFS(const char* path) {
@@ -98,7 +99,8 @@ VFS* LoadVFS(const char* path) {
 		return NULL;
 	}
 	cJSON* fat_array = cJSON_GetObjectItem(fat, "fat");
-	
+	construct_hashtable_for_vfs(vfs, fat_array);
+	cJSON_Delete(fat);
 	return vfs;
 }
 
